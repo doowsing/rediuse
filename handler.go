@@ -28,10 +28,18 @@ func (handler *RdbHandler) Get(key string) *RdbResult {
 }
 
 func (handler *RdbHandler) Set(key string, value interface{}) *RdbResult {
+	value, err := marshal(value)
+	if err != nil {
+		return NewErrRdbResult(err)
+	}
 	return handler.DoCommand("SET", key, value)
 }
 
 func (handler *RdbHandler) SetEx(key string, value interface{}, second int) *RdbResult {
+	value, err := marshal(value)
+	if err != nil {
+		return NewErrRdbResult(err)
+	}
 	return handler.DoCommand("SET", key, value, "EX", second)
 }
 
@@ -52,6 +60,10 @@ func (handler *RdbHandler) Hget(key string, field interface{}) *RdbResult {
 }
 
 func (handler *RdbHandler) Hset(key string, field interface{}, value interface{}) *RdbResult {
+	value, err := marshal(value)
+	if err != nil {
+		return NewErrRdbResult(err)
+	}
 	return handler.DoCommand("HSET", key, getString(field), value)
 }
 
@@ -72,7 +84,7 @@ func (handler *RdbHandler) Hmset(key string, filed2data map[string]interface{}) 
 	for i, v := range filed2data {
 		vJson, err := marshal(v)
 		if err != nil {
-			return NewErrRdbResult("批量序列化失败")
+			return NewErrRdbResult(err)
 		} else {
 			args = append(args, i, vJson)
 		}

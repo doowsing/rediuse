@@ -2,8 +2,6 @@ package rediuse
 
 import (
 	"encoding/json"
-	"errors"
-	"fmt"
 	"github.com/gomodule/redigo/redis"
 )
 
@@ -12,10 +10,10 @@ type RdbResult struct {
 	err  error
 }
 
-func NewErrRdbResult(format string, a ...interface{}) *RdbResult {
+func NewErrRdbResult(err error) *RdbResult {
 	return &RdbResult{
 		data: nil,
-		err:  errors.New(fmt.Sprintf(format, a...)),
+		err:  err,
 	}
 }
 
