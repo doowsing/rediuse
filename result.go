@@ -240,6 +240,75 @@ func (opt *RdbResult) scanMap(s interface{}, src []interface{}) error {
 				return err
 			}
 			break
+		case reflect.String:
+			vtHandle = func(key []byte, kv *reflect.Value) error {
+				*kv = reflect.ValueOf(key).Convert(kt)
+				return nil
+			}
+		case reflect.Float32, reflect.Float64:
+			vtHandle = func(key []byte, kv *reflect.Value) error {
+				s := string(key)
+				n, err := strconv.ParseFloat(s, 64)
+				if err != nil || reflect.Zero(kt).OverflowFloat(n) {
+					errMsg := ""
+					if err != nil {
+						errMsg = err.Error()
+					}
+					return errors.New("number " + s + " convert failed. Unmarshal Type(float) err:" + errMsg)
+				}
+				*kv = reflect.ValueOf(n).Convert(kt)
+				return nil
+			}
+		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+
+			vtHandle = func(key []byte, kv *reflect.Value) error {
+				s := string(key)
+				n, err := strconv.ParseInt(s, 10, 64)
+				if err != nil || reflect.Zero(kt).OverflowInt(n) {
+					errMsg := ""
+					if err != nil {
+						errMsg = err.Error()
+					}
+					return errors.New("number " + s + " convert failed. Unmarshal Type(int) err:" + errMsg)
+				}
+				*kv = reflect.ValueOf(n).Convert(kt)
+				return nil
+			}
+		case reflect.Bool:
+			vtHandle = func(key []byte, kv *reflect.Value) error {
+				s := string(key)
+				n, err := strconv.ParseInt(s, 10, 64)
+				if err != nil || reflect.Zero(kt).OverflowInt(n) {
+					errMsg := ""
+					if err != nil {
+						errMsg = err.Error()
+					}
+					return errors.New("number " + s + " convert failed. Unmarshal Type(bool) err:" + errMsg)
+				}
+				boolV := false
+				if n > 0 {
+					boolV = true
+				}
+				*kv = reflect.ValueOf(boolV).Convert(kt)
+				return nil
+			}
+
+		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+
+			vtHandle = func(key []byte, kv *reflect.Value) error {
+				s := string(key)
+				n, err := strconv.ParseUint(s, 10, 64)
+				if err != nil || reflect.Zero(kt).OverflowUint(n) {
+					errMsg := ""
+					if err != nil {
+						errMsg = err.Error()
+					}
+					return errors.New("number " + s + " convert failed. Unmarshal Type(uint) err:" + errMsg)
+				}
+				*kv = reflect.ValueOf(n).Convert(kt)
+				return nil
+			}
+
 		default:
 			return fmt.Errorf("can't handle type:%s\n", elemType.Kind())
 		}
