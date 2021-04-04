@@ -240,78 +240,81 @@ func (opt *RdbResult) scanMap(s interface{}, src []interface{}) error {
 				return err
 			}
 			break
-		case reflect.String:
-			vtHandle = func(key []byte, kv *reflect.Value) error {
-				*kv = reflect.ValueOf(key).Convert(kt)
-				return nil
-			}
-		case reflect.Float32, reflect.Float64:
-			vtHandle = func(key []byte, kv *reflect.Value) error {
-				s := string(key)
-				n, err := strconv.ParseFloat(s, 64)
-				if err != nil || reflect.Zero(kt).OverflowFloat(n) {
-					errMsg := ""
-					if err != nil {
-						errMsg = err.Error()
-					}
-					return errors.New("number " + s + " convert failed. Unmarshal Type(float) err:" + errMsg)
-				}
-				*kv = reflect.ValueOf(n).Convert(kt)
-				return nil
-			}
-		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-
-			vtHandle = func(key []byte, kv *reflect.Value) error {
-				s := string(key)
-				n, err := strconv.ParseInt(s, 10, 64)
-				if err != nil || reflect.Zero(kt).OverflowInt(n) {
-					errMsg := ""
-					if err != nil {
-						errMsg = err.Error()
-					}
-					return errors.New("number " + s + " convert failed. Unmarshal Type(int) err:" + errMsg)
-				}
-				*kv = reflect.ValueOf(n).Convert(kt)
-				return nil
-			}
-		case reflect.Bool:
-			vtHandle = func(key []byte, kv *reflect.Value) error {
-				s := string(key)
-				n, err := strconv.ParseInt(s, 10, 64)
-				if err != nil || reflect.Zero(kt).OverflowInt(n) {
-					errMsg := ""
-					if err != nil {
-						errMsg = err.Error()
-					}
-					return errors.New("number " + s + " convert failed. Unmarshal Type(bool) err:" + errMsg)
-				}
-				boolV := false
-				if n > 0 {
-					boolV = true
-				}
-				*kv = reflect.ValueOf(boolV).Convert(kt)
-				return nil
-			}
-
-		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
-
-			vtHandle = func(key []byte, kv *reflect.Value) error {
-				s := string(key)
-				n, err := strconv.ParseUint(s, 10, 64)
-				if err != nil || reflect.Zero(kt).OverflowUint(n) {
-					errMsg := ""
-					if err != nil {
-						errMsg = err.Error()
-					}
-					return errors.New("number " + s + " convert failed. Unmarshal Type(uint) err:" + errMsg)
-				}
-				*kv = reflect.ValueOf(n).Convert(kt)
-				return nil
-			}
 
 		default:
 			return fmt.Errorf("can't handle type:%s\n", elemType.Kind())
 		}
+	case reflect.String:
+		vtHandle = func(key []byte, kv *reflect.Value) error {
+			(*kv).Set(reflect.ValueOf(key).Convert(elemType))
+			return nil
+		}
+	case reflect.Float32, reflect.Float64:
+		vtHandle = func(key []byte, kv *reflect.Value) error {
+			s := string(key)
+			n, err := strconv.ParseFloat(s, 64)
+			if err != nil || reflect.Zero(elemType).OverflowFloat(n) {
+				errMsg := ""
+				if err != nil {
+					errMsg = err.Error()
+				}
+				return errors.New("number " + s + " convert failed. Unmarshal Type(float) err:" + errMsg)
+			}
+			(*kv).Set(reflect.ValueOf(n).Convert(elemType))
+			return nil
+		}
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+
+		vtHandle = func(key []byte, kv *reflect.Value) error {
+			s := string(key)
+			n, err := strconv.ParseInt(s, 10, 64)
+			//fmt.Printf("scan map[int]int value s:%s, v:%d\n", s, n)
+			if err != nil || reflect.Zero(elemType).OverflowInt(n) {
+				errMsg := ""
+				if err != nil {
+					errMsg = err.Error()
+				}
+				return errors.New("number " + s + " convert failed. Unmarshal Type(int) err:" + errMsg)
+			}
+			(*kv).Set(reflect.ValueOf(n).Convert(elemType))
+			//*kv = reflect.ValueOf(n).Convert(elemType)
+			return nil
+		}
+	case reflect.Bool:
+		vtHandle = func(key []byte, kv *reflect.Value) error {
+			s := string(key)
+			n, err := strconv.ParseInt(s, 10, 64)
+			if err != nil || reflect.Zero(elemType).OverflowInt(n) {
+				errMsg := ""
+				if err != nil {
+					errMsg = err.Error()
+				}
+				return errors.New("number " + s + " convert failed. Unmarshal Type(bool) err:" + errMsg)
+			}
+			boolV := false
+			if n > 0 {
+				boolV = true
+			}
+			(*kv).Set(reflect.ValueOf(boolV).Convert(elemType))
+			return nil
+		}
+
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+
+		vtHandle = func(key []byte, kv *reflect.Value) error {
+			s := string(key)
+			n, err := strconv.ParseUint(s, 10, 64)
+			if err != nil || reflect.Zero(elemType).OverflowUint(n) {
+				errMsg := ""
+				if err != nil {
+					errMsg = err.Error()
+				}
+				return errors.New("number " + s + " convert failed. Unmarshal Type(uint) err:" + errMsg)
+			}
+			(*kv).Set(reflect.ValueOf(n).Convert(elemType))
+			return nil
+		}
+
 	default:
 		return fmt.Errorf("can't handle type:%s\n", elemType.Kind())
 	}
@@ -339,20 +342,17 @@ func (opt *RdbResult) scanMap(s interface{}, src []interface{}) error {
 			if src[i+1] == nil || reflect.ValueOf(src[i+1]).IsNil() {
 				continue
 			}
-			return fmt.Errorf("redigo.ScanStruct: key %d not a bulk string value", i)
+			return fmt.Errorf("rediuse.ScanStruct: key %d not a bulk string value", i)
 		}
 		data := valueData
 		var subv reflect.Value
-		var elemv reflect.Value
 
 		if !subv.IsValid() {
-			elemv = reflect.New(elemType)
-			subv = elemv.Elem()
+			subv = reflect.New(elemType).Elem()
 		} else {
-			elemv = reflect.Zero(elemType)
-			subv.Set(elemv)
+			subv.Set(reflect.Zero(elemType))
 		}
-		if err = vtHandle(data, &elemv); err != nil {
+		if err = vtHandle(data, &subv); err != nil {
 			return err
 		}
 
